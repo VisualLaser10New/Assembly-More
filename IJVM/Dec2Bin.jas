@@ -1,0 +1,319 @@
+// Ema3nto - Visual Laser 10 New
+// 04-19-2024
+// Run with ijvm mic-1 emulator or build your own mic-1 pc processor
+// Good luck to understand how it's work, don't ask to me, cuz I don't remember :)
+
+//convert decimal input number from user to binary and print
+.constant
+	OBJREF 122
+	ASCII 48
+.end-constant
+.main
+	.var
+		num //number to convert in binary
+		count //how many digits has the num in binary 
+	.end-var
+
+	ldc_w OBJREF
+	invokevirtual asknum
+	istore num
+
+cycle:
+
+	ldc_w OBJREF
+	iload num
+	//print if even or odd
+	invokevirtual evenodd
+	
+	ldc_w ASCII
+	iadd //store digit in stack
+	iinc count 1 //increase number of digits
+	
+
+	ldc_w OBJREF
+	iload num
+	//divide by 2
+	invokevirtual dividetwo
+
+	//on stack now there's the result
+	dup //one used by if
+	istore num
+
+	ifeq endcycle //if number is 0 end
+	goto cycle //else recycle
+
+endcycle:
+
+	//print all number stacked
+printcycle:
+	out //print 1 or 0
+	iinc count -1
+	iload count
+	ifeq endprint
+	goto printcycle
+
+endprint:
+	halt
+
+.end-main
+
+.method asknum()
+	.var
+		i
+		j
+		num
+		wholenum
+	.end-var
+
+	bipush 0
+	dup
+	istore num
+	istore wholenum
+
+	bipush 32 // 
+	bipush 58 //:
+	bipush 82 //R
+	bipush 69 //E
+	bipush 66 //B
+	bipush 77 //M
+	bipush 85 //U
+	bipush 78 //N
+	bipush 32 // 
+	bipush 69 //E
+	bipush 72 //H
+	bipush 84 //T
+	bipush 32 // 
+	bipush 82 //R
+	bipush 69 //E
+	bipush 84 //T
+	bipush 78 //N
+	bipush 69 //E
+
+	//print 18 times
+	bipush 18
+	istore i
+cycleprint:
+	out
+	
+	//i--
+	iinc i -1
+	iload i
+
+	ifeq endprint
+	goto cycleprint
+
+endprint:
+
+//now use i to count the number of digits entered
+bipush 0
+istore i
+cyclewholein:
+	//ask the num digit by digit, store the whole number in wholenum
+	cyclein:
+		IN
+		dup //used by ifeq
+		//dup //used to increase i
+		istore num
+		
+		ifeq cyclein //if is 0 recycle for the input
+
+		iload num
+		bipush 10
+		if_icmpeq endwholein //if last insert is . (dot) end input
+	endin:
+		//increase i because a digit has been inserted
+		iinc i 1
+		//print the entered digit
+		iinc num -48
+		ldc_w OBJREF
+		iload num
+		invokevirtual printnum
+		pop
+
+		//store the digit in the stack to be restored for the conversion
+		iload num
+	goto cyclewholein
+endwholein:
+	//now the user has entered the whole number, it's saved in the stack reversed
+	//just convert the digit (not ascii) into the number
+	// 1,2,4 -> 4*1 + 2*10 + 1*100 = 124
+
+	//j=0
+	//i--
+	//repeat from here
+	//num =first number of the stack * 10**j
+	//i--
+	//j++
+	//wholenum += num
+	//repeat until i is 0
+	bipush 0
+	istore j
+	
+cycleconvertnum:
+	ldc_w OBJREF
+	swap
+	iload j
+	//in the stack from bottom are: digit, digit, OBJREF, digit to pass, j
+	invokevirtual numtoposition
+	//sum the returned value to wholenum
+	iload wholenum
+	iadd
+	istore wholenum
+
+	//i--
+	iinc i -1
+	//j++
+	iinc j 1
+
+	iload i
+	ifeq endcycleconvertnum //if i ==0 end cycle
+	goto cycleconvertnum
+
+endcycleconvertnum:
+	//wholenum contains the number
+
+	//print \n
+	bipush 10
+	out
+
+	//return the input wholenum
+	iload wholenum
+	ireturn
+.end-method
+
+.method numtoposition(num, i)
+	//return num * 10**i
+
+	//calc 10**i
+	ldc_w OBJREF
+	bipush 10
+	iload i
+	invokevirtual pow
+	//result in tos
+
+	//multiply num * tos
+	ldc_w OBJREF
+	swap
+	iload num
+	invokevirtual multiply
+
+	//return result
+	ireturn
+.end-method
+
+.method pow(num, i)
+	//repeat multiply until i ==0
+	.var
+		res
+	.end-var
+	
+	//if i==0 return 1
+	iload i
+	ifeq returnone
+	goto nonreturnone
+	returnone:
+		bipush 1
+		ireturn
+
+nonreturnone:
+	bipush 1 //initialize the res 1 is the identity for the multiplication operation
+	istore res
+
+	//repeat i times
+	cyclepow: 
+		ldc_w OBJREF
+		iload res
+		iload num
+		invokevirtual multiply
+
+		//result must be stored in res
+		istore res
+
+		//decrement i
+		iinc i -1
+		iload i
+
+		ifeq endcyclepow
+		goto cyclepow
+	endcyclepow:
+
+	iload res
+	ireturn
+.end-method
+
+.method multiply(numa, numb)
+	//repeat sum of numa, numb times
+	.var
+		res
+	.end-var
+
+	bipush 0
+	istore res
+
+	cyclemul:
+		iload res
+		iload numa
+		iadd
+		istore res 
+
+		iinc numb -1
+
+		iload numb
+		ifeq endcyclemul
+		goto cyclemul
+	endcyclemul:
+
+	iload res
+	ireturn
+.end-method
+
+.method printnum(num)
+	//print a digit in decimal
+	iinc num 48
+	iload num
+	out
+	ireturn
+.end-method
+
+.method dividetwo(num)
+	.var
+		count
+	.end-var
+	
+	bipush 0
+	istore count
+
+	//num-2
+	//count++
+	//if num <=0 return count
+	//else repeat
+
+dividecycle:
+	//num-2
+	iload num
+	bipush 2
+	isub
+	dup
+	dup
+	istore num
+
+	//count ++
+	iinc count 1
+
+	ifeq retcount
+	iflt retcountb
+	goto dividecycle
+
+retcountb:
+	iinc count -1 //decrement 1 because number subtracted is < 0
+retcount:
+	iload count
+	ireturn
+.end-method
+
+.method evenodd(num) //0 even, 1 odd
+	iload num
+	bipush 1
+	iand
+	ireturn
+.end-method

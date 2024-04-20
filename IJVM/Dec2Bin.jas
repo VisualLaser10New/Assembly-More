@@ -119,7 +119,7 @@ cyclewholein:
 
 		iload num
 		bipush 10
-		if_icmpeq endwholein //if last insert is . (dot) end input
+		if_icmpeq endwholein //if last insert is \n (enter) end input
 	endin:
 		//increase i because a digit has been inserted
 		iinc i 1
